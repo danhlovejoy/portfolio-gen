@@ -1,5 +1,5 @@
 ---
-title: Gradio Chatbot
+title: Roseaiml
 emoji: 💬
 colorFrom: yellow
 colorTo: purple
