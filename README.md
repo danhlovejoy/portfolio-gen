@@ -14,7 +14,7 @@ pinned: false
 Rose State College — AIML 2003 / AIML 2013 — Spring 2026.
 
 Students fill out a form describing their final portfolio presentation. The app
-calls Gemini 2.0 Flash to generate a customized rubric and produces a
+calls Gemini 2.5 Flash to generate a customized rubric and produces a
 downloadable DOCX assignment sheet for the instructor to sign.
 
 See [`SPEC.md`](SPEC.md) for full design and architecture notes.

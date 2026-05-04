@@ -7,7 +7,7 @@ Gradio app deployed on Hugging Face Spaces (CPU free tier).
 
 ## Purpose
 
-Students fill out a form describing their final portfolio presentation. The app validates their selections, calls Gemini 2.0 Flash to generate a customized rubric, and produces a downloadable DOCX assignment sheet. The instructor reviews the DOCX, edits if needed, signs it, and returns it as the student's contract for the final presentation.
+Students fill out a form describing their final portfolio presentation. The app validates their selections, calls Gemini 2.5 Flash to generate a customized rubric, and produces a downloadable DOCX assignment sheet. The instructor reviews the DOCX, edits if needed, signs it, and returns it as the student's contract for the final presentation.
 
 ---
 
@@ -16,7 +16,7 @@ Students fill out a form describing their final portfolio presentation. The app 
 ```
 ┌─────────────┐      ┌────────────────────┐      ┌──────────────────┐
 │  Gradio UI  │ ──►  │  rubric_generator  │ ──►  │ document_builder │
-│  (app.py)   │      │  (Gemini 2.0 Flash)│      │  (python-docx)   │
+│  (app.py)   │      │  (Gemini 2.5 Flash)│      │  (python-docx)   │
 └─────────────┘      └────────────────────┘      └──────────────────┘
        │                       │                          │
    Form input          JSON rubric data           DOCX file output
@@ -29,7 +29,7 @@ Students fill out a form describing their final portfolio presentation. The app 
 | `app.py` | Gradio Blocks UI, validation, event wiring |
 | `rubric_generator.py` | CLO data, rubric criteria, Gemini prompt, fallback descriptions |
 | `document_builder.py` | DOCX generation with python-docx (portrait assignment sheet + landscape rubric) |
-| `requirements.txt` | `gradio`, `google-generativeai`, `python-docx` |
+| `requirements.txt` | `gradio`, `google-genai`, `python-docx` |
 
 ---
 
@@ -110,7 +110,7 @@ Each criterion is scored across four levels:
 
 ## Gemini Integration
 
-**Model:** `gemini-2.0-flash`
+**Model:** `gemini-2.5-flash`
 **Auth:** `GEMINI_API_KEY` environment variable (set as HF Space secret)
 **Response format:** `application/json` (structured output mode)
 

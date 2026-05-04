@@ -1,4 +1,4 @@
-"""Rubric customization via Gemini 2.0 Flash with template fallback."""
+"""Rubric customization via Gemini 2.5 Flash with template fallback."""
 
 import json
 import os
@@ -72,7 +72,7 @@ FALLBACK = {
 
 
 def generate_rubric(selected_nlp_indices, selected_cv_indices, project_description, presentation_type):
-    """Call Gemini 2.0 Flash to generate customized rubric descriptions.
+    """Call Gemini 2.5 Flash to generate customized rubric descriptions.
 
     Args:
         selected_nlp_indices: list of int indices into NLP_CLOS
@@ -137,7 +137,7 @@ Return ONLY a JSON object with this exact structure:
     try:
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
