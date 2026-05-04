@@ -60,13 +60,18 @@ THEME = gr.themes.Soft(
 # ---------------------------------------------------------------------------
 
 def update_visibility(presentation_type):
-    """Show/hide CLO checkbox groups based on presentation type."""
+    """Show/hide CLO checkbox groups and update their labels to reflect minimums."""
     show_nlp = presentation_type in ("Standalone NLP", "Combined (NLP + CV)")
     show_cv = presentation_type in ("Standalone CV", "Combined (NLP + CV)")
-    return (
-        gr.update(visible=show_nlp, value=[] if not show_nlp else gr.update()),
-        gr.update(visible=show_cv, value=[] if not show_cv else gr.update()),
-    )
+    minimum = 2 if presentation_type == "Combined (NLP + CV)" else 4
+    nlp_label = f"NLP Course Learning Outcomes (select at least {minimum})"
+    cv_label = f"CV Course Learning Outcomes (select at least {minimum})"
+
+    nlp_update = (gr.update(visible=True, label=nlp_label) if show_nlp
+                  else gr.update(visible=False, value=[], label=nlp_label))
+    cv_update = (gr.update(visible=True, label=cv_label) if show_cv
+                 else gr.update(visible=False, value=[], label=cv_label))
+    return nlp_update, cv_update
 
 
 def _render_rubric_markdown(student_name, rubric):
@@ -170,7 +175,7 @@ with gr.Blocks(
     cv_group = gr.CheckboxGroup(
         choices=CV_CHOICES,
         label="CV Course Learning Outcomes (select at least 4)",
-        visible=False,
+        visible=True,
     )
 
     description_input = gr.Textbox(
@@ -190,6 +195,15 @@ with gr.Blocks(
 
     # --- Wiring ---
     type_input.change(
+        update_visibility,
+        inputs=type_input,
+        outputs=[nlp_group, cv_group],
+    )
+
+    # Apply correct initial hidden state on page load (default is Standalone NLP,
+    # so CV group should be hidden). Both groups are rendered visible=True at
+    # build time so Gradio 6.x materializes them in the DOM and can later toggle.
+    demo.load(
         update_visibility,
         inputs=type_input,
         outputs=[nlp_group, cv_group],

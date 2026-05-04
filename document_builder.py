@@ -1,6 +1,7 @@
 """DOCX assignment sheet and rubric builder using python-docx."""
 
 import os
+import tempfile
 from datetime import datetime
 
 from docx import Document
@@ -27,7 +28,7 @@ WHITE_FILL = "FFFFFF"
 
 
 def build_docx(student_name, presentation_type, selected_nlp_indices, selected_cv_indices,
-               project_description, contingency, rubric_data, output_dir="/tmp"):
+               project_description, contingency, rubric_data, output_dir=None):
     """Build a DOCX with the assignment sheet and customized rubric.
 
     Returns:
@@ -220,7 +221,7 @@ def build_docx(student_name, presentation_type, selected_nlp_indices, selected_c
         c if c.isalnum() or c in " -_" else "" for c in student_name
     ).strip().replace(" ", "_")
     filename = f"portfolio_assignment_{safe_name}.docx"
-    filepath = os.path.join(output_dir, filename)
+    filepath = os.path.join(output_dir or tempfile.gettempdir(), filename)
     doc.save(filepath)
     return filepath
 
