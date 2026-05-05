@@ -1,6 +1,5 @@
 """Rubric customization via Claude Opus 4.7 with template fallback."""
 
-import json
 import os
 
 import anthropic
@@ -73,10 +72,19 @@ FALLBACK = {
 
 
 def _build_schema():
-    """JSON schema enforcing the rubric shape returned by Claude."""
+    """JSON schema for the submit_rubric tool's input."""
+    level_descriptions = {
+        "full": "Full Credit description: 1-2 sentences describing what earns full credit, referencing the student's specific project and CLOs.",
+        "partial": "Partial Credit description: 1-2 sentences describing partial credit, meaningfully distinct from minimal.",
+        "minimal": "Minimal Credit description: 1-2 sentences describing minimal credit, meaningfully distinct from partial.",
+        "none": "No Credit description: 1-2 sentences describing what earns no credit (criterion not met at all).",
+    }
     level_schema = {
         "type": "object",
-        "properties": {level: {"type": "string"} for level in LEVELS},
+        "properties": {
+            level: {"type": "string", "description": level_descriptions[level]}
+            for level in LEVELS
+        },
         "required": list(LEVELS),
         "additionalProperties": False,
     }
@@ -142,30 +150,32 @@ The four criteria:
 3. Project Scope (20 points) — Is the project appropriately ambitious and well-scoped?
 4. Presentation & Understanding (25 points) — Is the presentation clear and well-timed? Can the student answer questions?
 
-Return ONLY a JSON object with this exact structure (each value must be a 1-2 sentence
-description that references the student's specific project and CLOs — do NOT use placeholders):
-{{
-  "CLO Coverage": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
-  "Working Application": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
-  "Project Scope": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
-  "Presentation & Understanding": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}}
-}}"""
+Call the submit_rubric tool with all 16 descriptions. Each description must be a real
+1-2 sentence sentence referencing the student's specific project and CLOs."""
+
+    tool = {
+        "name": "submit_rubric",
+        "description": "Submit the customized rubric descriptions for the student's project.",
+        "strict": True,
+        "input_schema": _build_schema(),
+    }
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model="claude-opus-4-7",
             max_tokens=4096,
+            tools=[tool],
+            tool_choice={"type": "tool", "name": "submit_rubric"},
             messages=[{"role": "user", "content": prompt}],
-            output_config={
-                "format": {
-                    "type": "json_schema",
-                    "schema": _build_schema(),
-                }
-            },
         )
-        text = next(b.text for b in response.content if b.type == "text")
-        result = json.loads(text)
+        result = next(
+            (b.input for b in response.content if b.type == "tool_use" and b.name == "submit_rubric"),
+            None,
+        )
+        if result is None:
+            print("No submit_rubric tool call in Claude response. Using fallback.")
+            return FALLBACK
 
         for criterion in CRITERIA:
             name = criterion["name"]
@@ -173,8 +183,8 @@ description that references the student's specific project and CLOs — do NOT u
                 print(f"Missing criterion '{name}' in Claude response. Using fallback.")
                 return FALLBACK
             for level in LEVELS:
-                if level not in result[name]:
-                    print(f"Missing level '{level}' for '{name}'. Using fallback.")
+                if level not in result[name] or not result[name][level].strip():
+                    print(f"Empty or missing '{level}' for '{name}'. Using fallback.")
                     return FALLBACK
 
         return result
