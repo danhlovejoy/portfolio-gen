@@ -140,7 +140,16 @@ The four criteria:
 1. CLO Coverage (30 points) — Does the project demonstrate the selected CLOs with visible evidence?
 2. Working Application (25 points) — Does the application run during the presentation?
 3. Project Scope (20 points) — Is the project appropriately ambitious and well-scoped?
-4. Presentation & Understanding (25 points) — Is the presentation clear and well-timed? Can the student answer questions?"""
+4. Presentation & Understanding (25 points) — Is the presentation clear and well-timed? Can the student answer questions?
+
+Return ONLY a JSON object with this exact structure (each value must be a 1-2 sentence
+description that references the student's specific project and CLOs — do NOT use placeholders):
+{{
+  "CLO Coverage": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
+  "Working Application": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
+  "Project Scope": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
+  "Presentation & Understanding": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}}
+}}"""
 
     try:
         client = anthropic.Anthropic(api_key=api_key)
