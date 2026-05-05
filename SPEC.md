@@ -7,7 +7,7 @@ Gradio app deployed on Hugging Face Spaces (CPU free tier).
 
 ## Purpose
 
-Students fill out a form describing their final portfolio presentation. The app validates their selections, calls Gemini 2.5 Flash to generate a customized rubric, and produces a downloadable DOCX assignment sheet. The instructor reviews the DOCX, edits if needed, signs it, and returns it as the student's contract for the final presentation.
+Students fill out a form describing their final portfolio presentation. The app validates their selections, calls Claude Opus 4.7 to generate a customized rubric, and produces a downloadable DOCX assignment sheet. The instructor reviews the DOCX, edits if needed, signs it, and returns it as the student's contract for the final presentation.
 
 ---
 
@@ -16,7 +16,7 @@ Students fill out a form describing their final portfolio presentation. The app 
 ```
 ┌─────────────┐      ┌────────────────────┐      ┌──────────────────┐
 │  Gradio UI  │ ──►  │  rubric_generator  │ ──►  │ document_builder │
-│  (app.py)   │      │  (Gemini 2.5 Flash)│      │  (python-docx)   │
+│  (app.py)   │      │  (Claude Opus 4.7) │      │  (python-docx)   │
 └─────────────┘      └────────────────────┘      └──────────────────┘
        │                       │                          │
    Form input          JSON rubric data           DOCX file output
@@ -27,9 +27,9 @@ Students fill out a form describing their final portfolio presentation. The app 
 | File | Role |
 |------|------|
 | `app.py` | Gradio Blocks UI, validation, event wiring |
-| `rubric_generator.py` | CLO data, rubric criteria, Gemini prompt, fallback descriptions |
+| `rubric_generator.py` | CLO data, rubric criteria, Claude prompt, fallback descriptions |
 | `document_builder.py` | DOCX generation with python-docx (portrait assignment sheet + landscape rubric) |
-| `requirements.txt` | `gradio`, `google-genai`, `python-docx` |
+| `requirements.txt` | `gradio`, `anthropic`, `python-docx` |
 
 ---
 
@@ -97,7 +97,7 @@ Each criterion is scored across four levels:
 4. **CV CLOs** — checkbox group, visible when type includes CV
 5. **Project Description** — multiline text, required ("What are you building? What problem does it solve? What data or APIs does it use?")
 6. **Contingency Plan** — multiline text, required ("If your idea turns out to be too ambitious, what will you cut and still meet the CLO requirements?")
-7. **Generate** button → validates → calls Gemini → builds DOCX → returns file download
+7. **Generate** button → validates → calls Claude → builds DOCX → returns file download
 
 ### Validation Rules
 
@@ -108,11 +108,11 @@ Each criterion is scored across four levels:
 
 ---
 
-## Gemini Integration
+## Claude Integration
 
-**Model:** `gemini-2.5-flash`
-**Auth:** `GEMINI_API_KEY` environment variable (set as HF Space secret)
-**Response format:** `application/json` (structured output mode)
+**Model:** `claude-opus-4-7`
+**Auth:** `CLAUDE_API_KEY` environment variable (set as HF Space secret)
+**Response format:** JSON via `output_config.format` with a `json_schema` (structured outputs)
 
 ### Prompt Strategy
 
@@ -125,7 +125,7 @@ The prompt provides:
 
 ### Fallback
 
-If `GEMINI_API_KEY` is missing or the API call fails, the app uses generic fallback descriptions defined in `rubric_generator.py`. These are functional but not customized to the student's project.
+If `CLAUDE_API_KEY` is missing or the API call fails, the app uses generic fallback descriptions defined in `rubric_generator.py`. These are functional but not customized to the student's project.
 
 ### Validation
 
@@ -252,12 +252,12 @@ portfolio-generator/
 
 ### Secrets
 
-Set `GEMINI_API_KEY` in the Space settings under Repository secrets. The app reads it via `os.environ.get("GEMINI_API_KEY")`.
+Set `CLAUDE_API_KEY` in the Space settings under Repository secrets. The app reads it via `os.environ.get("CLAUDE_API_KEY")`.
 
 ### Deploy Steps
 
 1. Create a new Space on huggingface.co (SDK: Gradio, hardware: CPU Basic).
-2. Add `GEMINI_API_KEY` as a Space secret.
+2. Add `CLAUDE_API_KEY` as a Space secret.
 3. Push the four files to the Space repo.
 4. The Space auto-builds and deploys.
 

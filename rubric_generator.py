@@ -1,10 +1,9 @@
-"""Rubric customization via Gemini 2.5 Flash with template fallback."""
+"""Rubric customization via Claude Opus 4.7 with template fallback."""
 
 import json
 import os
 
-from google import genai
-from google.genai import types
+import anthropic
 
 # ---------------------------------------------------------------------------
 # CLO data
@@ -39,8 +38,10 @@ CRITERIA = [
     {"name": "Presentation & Understanding", "points": 25},
 ]
 
+LEVELS = ("full", "partial", "minimal", "none")
+
 # ---------------------------------------------------------------------------
-# Fallback descriptions (used when Gemini is unavailable)
+# Fallback descriptions (used when Claude is unavailable)
 # ---------------------------------------------------------------------------
 
 FALLBACK = {
@@ -71,8 +72,24 @@ FALLBACK = {
 }
 
 
+def _build_schema():
+    """JSON schema enforcing the rubric shape returned by Claude."""
+    level_schema = {
+        "type": "object",
+        "properties": {level: {"type": "string"} for level in LEVELS},
+        "required": list(LEVELS),
+        "additionalProperties": False,
+    }
+    return {
+        "type": "object",
+        "properties": {c["name"]: level_schema for c in CRITERIA},
+        "required": [c["name"] for c in CRITERIA],
+        "additionalProperties": False,
+    }
+
+
 def generate_rubric(selected_nlp_indices, selected_cv_indices, project_description, presentation_type):
-    """Call Gemini 2.5 Flash to generate customized rubric descriptions.
+    """Call Claude Opus 4.7 to generate customized rubric descriptions.
 
     Args:
         selected_nlp_indices: list of int indices into NLP_CLOS
@@ -83,12 +100,11 @@ def generate_rubric(selected_nlp_indices, selected_cv_indices, project_descripti
     Returns:
         dict: {criterion_name: {"full": str, "partial": str, "minimal": str, "none": str}}
     """
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("CLAUDE_API_KEY")
     if not api_key:
-        print("No GEMINI_API_KEY found. Using fallback rubric descriptions.")
+        print("No CLAUDE_API_KEY found. Using fallback rubric descriptions.")
         return FALLBACK
 
-    # Build CLO text for the prompt
     clo_lines = []
     if selected_nlp_indices:
         clo_lines.append("NLP Course Learning Outcomes selected:")
@@ -124,34 +140,30 @@ The four criteria:
 1. CLO Coverage (30 points) — Does the project demonstrate the selected CLOs with visible evidence?
 2. Working Application (25 points) — Does the application run during the presentation?
 3. Project Scope (20 points) — Is the project appropriately ambitious and well-scoped?
-4. Presentation & Understanding (25 points) — Is the presentation clear and well-timed? Can the student answer questions?
-
-Return ONLY a JSON object with this exact structure:
-{{
-  "CLO Coverage": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
-  "Working Application": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
-  "Project Scope": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}},
-  "Presentation & Understanding": {{"full": "...", "partial": "...", "minimal": "...", "none": "..."}}
-}}"""
+4. Presentation & Understanding (25 points) — Is the presentation clear and well-timed? Can the student answer questions?"""
 
     try:
-        client = genai.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-            ),
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-opus-4-7",
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+            output_config={
+                "format": {
+                    "type": "json_schema",
+                    "schema": _build_schema(),
+                }
+            },
         )
-        result = json.loads(response.text)
+        text = next(b.text for b in response.content if b.type == "text")
+        result = json.loads(text)
 
-        # Validate structure
         for criterion in CRITERIA:
             name = criterion["name"]
             if name not in result:
-                print(f"Missing criterion '{name}' in Gemini response. Using fallback.")
+                print(f"Missing criterion '{name}' in Claude response. Using fallback.")
                 return FALLBACK
-            for level in ("full", "partial", "minimal", "none"):
+            for level in LEVELS:
                 if level not in result[name]:
                     print(f"Missing level '{level}' for '{name}'. Using fallback.")
                     return FALLBACK
@@ -159,5 +171,5 @@ Return ONLY a JSON object with this exact structure:
         return result
 
     except Exception as e:
-        print(f"Gemini API error: {e}. Using fallback rubric descriptions.")
+        print(f"Claude API error: {e}. Using fallback rubric descriptions.")
         return FALLBACK

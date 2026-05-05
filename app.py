@@ -1,10 +1,10 @@
 """Portfolio Assignment Sheet & Rubric Generator.
 
 Gradio app for Rose State College AIML 2003/2013 final portfolio presentations.
-Students fill out the form, Gemini customizes the rubric, and the app generates
-a downloadable PDF assignment sheet.
+Students fill out the form, Claude Opus 4.7 customizes the rubric, and the app
+generates a downloadable PDF assignment sheet.
 
-Deploy on Hugging Face Spaces (CPU free tier). Set GEMINI_API_KEY as a Space secret.
+Deploy on Hugging Face Spaces (CPU free tier). Set CLAUDE_API_KEY as a Space secret.
 """
 
 import gradio as gr
@@ -91,7 +91,7 @@ def _render_rubric_markdown(student_name, rubric):
 
 
 def generate(name, presentation_type, nlp_selected, cv_selected, description, contingency):
-    """Validate inputs, generate rubric via Gemini, build PDF."""
+    """Validate inputs, generate rubric via Claude, build PDF."""
 
     # --- Validation ---
     if not name or not name.strip():
