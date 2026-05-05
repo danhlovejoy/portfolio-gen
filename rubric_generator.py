@@ -31,10 +31,10 @@ CV_CLOS = [
 # ---------------------------------------------------------------------------
 
 CRITERIA = [
-    {"name": "CLO Coverage", "points": 30},
-    {"name": "Working Application", "points": 25},
-    {"name": "Project Scope", "points": 20},
-    {"name": "Presentation & Understanding", "points": 25},
+    {"name": "CLO Coverage", "points": 30, "key": "clo_coverage"},
+    {"name": "Working Application", "points": 25, "key": "working_application"},
+    {"name": "Project Scope", "points": 20, "key": "project_scope"},
+    {"name": "Presentation & Understanding", "points": 25, "key": "presentation_and_understanding"},
 ]
 
 LEVELS = ("full", "partial", "minimal", "none")
@@ -72,7 +72,11 @@ FALLBACK = {
 
 
 def _build_schema():
-    """JSON schema for the submit_rubric tool's input."""
+    """JSON schema for the submit_rubric tool's input.
+
+    Tool input schemas require property keys to match ^[a-zA-Z0-9_.-]{1,64}$,
+    so we use snake_case keys here and remap to display names after the call.
+    """
     level_descriptions = {
         "full": "Full Credit description: 1-2 sentences describing what earns full credit, referencing the student's specific project and CLOs.",
         "partial": "Partial Credit description: 1-2 sentences describing partial credit, meaningfully distinct from minimal.",
@@ -90,8 +94,11 @@ def _build_schema():
     }
     return {
         "type": "object",
-        "properties": {c["name"]: level_schema for c in CRITERIA},
-        "required": [c["name"] for c in CRITERIA],
+        "properties": {
+            c["key"]: {**level_schema, "description": f"Descriptions for the '{c['name']}' criterion ({c['points']} points)."}
+            for c in CRITERIA
+        },
+        "required": [c["key"] for c in CRITERIA],
         "additionalProperties": False,
     }
 
@@ -169,23 +176,26 @@ Call the submit_rubric tool with all 16 descriptions. Each description must be a
             tool_choice={"type": "tool", "name": "submit_rubric"},
             messages=[{"role": "user", "content": prompt}],
         )
-        result = next(
+        tool_input = next(
             (b.input for b in response.content if b.type == "tool_use" and b.name == "submit_rubric"),
             None,
         )
-        if result is None:
+        if tool_input is None:
             print("No submit_rubric tool call in Claude response. Using fallback.")
             return FALLBACK
 
+        # Remap snake_case schema keys back to display names.
+        result = {}
         for criterion in CRITERIA:
-            name = criterion["name"]
-            if name not in result:
-                print(f"Missing criterion '{name}' in Claude response. Using fallback.")
+            name, key = criterion["name"], criterion["key"]
+            if key not in tool_input:
+                print(f"Missing criterion '{key}' in Claude response. Using fallback.")
                 return FALLBACK
             for level in LEVELS:
-                if level not in result[name] or not result[name][level].strip():
-                    print(f"Empty or missing '{level}' for '{name}'. Using fallback.")
+                if level not in tool_input[key] or not tool_input[key][level].strip():
+                    print(f"Empty or missing '{level}' for '{key}'. Using fallback.")
                     return FALLBACK
+            result[name] = tool_input[key]
 
         return result
 
